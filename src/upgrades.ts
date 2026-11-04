@@ -56,6 +56,16 @@ export const UPGRADES: Upgrade[] = [
     maxLevel: 1,
     effect: { goldenEveryN: 8 },
   },
+  {
+    id: "comet",
+    name: "Comet Mole",
+    description:
+      "A comet-tailed cousin whose burrow drips a steady stream of stars.",
+    baseCost: 300,
+    costGrowth: 2,
+    maxLevel: 25,
+    effect: { dripMultiplier: 1.25 },
+  },
 ];
 
 export function costOf(upgrade: Upgrade, level: number): number {
