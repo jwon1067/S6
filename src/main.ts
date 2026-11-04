@@ -14,14 +14,23 @@ whackButton.textContent = "Whack the mole";
 
 let stars = 0;
 
+// The burrow sifts stardust on its own, even while nobody clicks.
+const starsPerSecond = 0.2;
+const TICK_MS = 250;
+
 function render() {
-  starCount.textContent = `★ ${stars} stars`;
+  starCount.textContent = `★ ${Math.floor(stars)} stars`;
 }
 
 whackButton.addEventListener("click", () => {
   stars += 1;
   render();
 });
+
+setInterval(() => {
+  stars += starsPerSecond * (TICK_MS / 1000);
+  render();
+}, TICK_MS);
 
 app.append(heading, starCount, whackButton);
 render();
