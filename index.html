@@ -3,31 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Whack-a-Mole</title>
+    <title>Star Burrow</title>
     <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-content: center;
-      justify-items: center;
-      gap: 12px;
       font-family: system-ui, sans-serif;
-      background: #171a3a;
+      background:
+        radial-gradient(900px 420px at 50% -80px, #34386b, rgba(52, 56, 107, 0)
+        70%),
+        linear-gradient(#171a3a, #0b0c20 70%, #090a18);
       color: #f2e8d5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+      padding: 32px 16px 56px;
     }
     h1 {
       margin: 0;
+      font-size: 2rem;
+      letter-spacing: 0.04em;
     }
-    .hint {
-      margin: 0;
+    .tagline {
+      margin: -14px 0 0;
       color: #b9b3d6;
+    }
+    #stats {
+      display: flex;
+      gap: 18px;
+      align-items: baseline;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     #star-count {
       margin: 0;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: #ffd76a;
+      font-variant-numeric: tabular-nums;
     }
     #rate {
       margin: 0;
@@ -36,8 +56,65 @@
     }
     #field {
       display: flex;
-      gap: 18px;
+      gap: 22px;
+      flex-wrap: wrap;
+      justify-content: center;
       position: relative;
+    }
+    .burrow {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      padding: 0;
+      overflow: hidden;
+      border-radius: 18px;
+      border: none;
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .burrow:focus-visible {
+      outline: 3px solid #ffd76a;
+      outline-offset: 3px;
+    }
+    .burrow .hole {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .burrow .mole {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      width: 64px;
+      z-index: 1;
+      transform: translateX(-50%) translateY(108%);
+      transition: transform 0.16s ease-out;
+      pointer-events: none;
+    }
+    .burrow.up .mole {
+      transform: translateX(-50%) translateY(4%);
+    }
+    .burrow .mole.whacked {
+      transform: translateX(-50%) translateY(4%) scale(1.12, 0.72);
+      transition-duration: 0.08s;
+    }
+    .burrow .mole.golden {
+      filter: brightness(1.35) saturate(1.5) hue-rotate(-15deg);
+    }
+    .burrow.whiff {
+      animation: shake 0.24s ease-in-out;
+    }
+    @keyframes shake {
+      25% {
+        transform: translateX(-3px);
+      }
+      75% {
+        transform: translateX(3px);
+      }
     }
     .float-star {
       position: absolute;
@@ -46,7 +123,8 @@
       color: #ffd76a;
       pointer-events: none;
       animation: rise 0.9s ease-out forwards;
-      z-index: 2;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+      z-index: 3;
     }
     .float-star.golden {
       color: #ffe9a8;
@@ -55,58 +133,79 @@
     @keyframes rise {
       from {
         opacity: 1;
+        transform: translateX(-50%);
       }
       to {
         opacity: 0;
         transform: translateX(-50%) translateY(-44px);
       }
     }
-    .burrow {
-      width: 110px;
-      height: 110px;
-      font: inherit;
-      font-size: 1.2rem;
+    .shop {
+      width: min(480px, 100%);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 16px;
-      border: 1px solid #4a4e8a;
-      background: #23264a;
-      color: #8f89b0;
-      cursor: pointer;
+      padding: 14px 16px 16px;
     }
-    .burrow.up {
-      background: #3d4180;
-      color: #ffd76a;
-      border-color: #ffd76a;
+    .shop h2 {
+      margin: 0 0 4px;
+      font-size: 1.05rem;
+      color: #cfc7ec;
     }
-    .burrow.whiff {
-      animation: shake 0.24s ease-in-out;
-    }
-    #shop {
-      max-width: 380px;
+    .upgrade {
+      display: block;
       width: 100%;
-    }
-    #shop button {
-      width: 100%;
-      font: inherit;
-      padding: 10px 14px;
+      text-align: left;
+      margin-top: 8px;
+      padding: 10px 12px;
       border-radius: 12px;
-      border: 1px solid #4a4e8a;
-      background: #2a2d55;
-      color: #f2e8d5;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
       cursor: pointer;
+      font: inherit;
     }
-    #shop button:hover:not(:disabled) {
-      background: #3d4180;
+    .upgrade:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
     }
-    #shop button:disabled {
+    .upgrade:disabled {
       opacity: 0.45;
       cursor: default;
     }
-    @keyframes shake {
-      25% {
-        transform: translateX(-3px);
+    .upgrade:focus-visible {
+      outline: 3px solid #ffd76a;
+      outline-offset: 2px;
+    }
+    .upgrade .name {
+      font-weight: 700;
+    }
+    .upgrade .desc {
+      display: block;
+      font-size: 0.85rem;
+      color: #b9b3d6;
+      margin-top: 2px;
+    }
+    .upgrade .meta {
+      display: block;
+      font-size: 0.85rem;
+      color: #ffd76a;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .footer {
+      margin: 0;
+      color: #8f89b0;
+      font-size: 0.85rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .burrow .mole,
+      .burrow.whiff,
+      .float-star {
+        transition: none;
+        animation: none;
       }
-      75% {
-        transform: translateX(3px);
+      .float-star {
+        opacity: 0;
       }
     }
     </style>

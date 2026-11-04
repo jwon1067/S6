@@ -1,22 +1,45 @@
+// @deno-types="./asset-url.d.ts"
+import burrowUrl from "./assets/burrow.svg?no-inline";
+// @deno-types="./asset-url.d.ts"
+import moleUrl from "./assets/mole.svg?no-inline";
+
 const app = document.querySelector<HTMLElement>("#app")!;
 
 const heading = document.createElement("h1");
-heading.textContent = "Whack-a-Mole";
+heading.textContent = "Star Burrow";
+
+const tagline = document.createElement("p");
+tagline.className = "tagline";
+tagline.textContent = "Whack the star moles; collect what falls.";
+
+const stats = document.createElement("div");
+stats.id = "stats";
 
 const starCount = document.createElement("p");
 starCount.id = "star-count";
-starCount.textContent = "★ 0 stars";
+starCount.textContent = "★ 0";
 
 const rate = document.createElement("p");
 rate.id = "rate";
+
+stats.append(starCount, rate);
 
 const field = document.createElement("div");
 field.id = "field";
 
 const shop = document.createElement("div");
-shop.id = "shop";
+shop.className = "shop";
 
-app.append(heading, starCount, rate, field, shop);
+const shopHeading = document.createElement("h2");
+shopHeading.textContent = "Burrow shop";
+shop.append(shopHeading);
+
+const footer = document.createElement("p");
+footer.className = "footer";
+footer.textContent =
+  "Moles, burrows, and fallen stars — a CMPM 121 D1 clicker.";
+
+app.append(heading, tagline, stats, field, shop, footer);
 
 const BURROW_COUNT = 3;
 const POP_DURATION_MS = 1400;
@@ -79,6 +102,7 @@ type Burrow = {
   up: boolean;
   upUntil: number;
   button: HTMLButtonElement;
+  mole: HTMLImageElement;
 };
 
 const burrows: Burrow[] = [];
@@ -87,17 +111,68 @@ for (let i = 0; i < BURROW_COUNT; i++) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "burrow";
-  button.textContent = "•";
+  button.setAttribute("aria-label", `Burrow ${i + 1}`);
+  const mole = document.createElement("img");
+  mole.className = "mole";
+  mole.src = moleUrl;
+  mole.alt = "";
+  mole.draggable = false;
+  const hole = document.createElement("img");
+  hole.className = "hole";
+  hole.src = burrowUrl;
+  hole.alt = "";
+  hole.draggable = false;
+  button.append(mole, hole);
   field.append(button);
-  const burrow: Burrow = { up: false, upUntil: 0, button };
+  const burrow: Burrow = { up: false, upUntil: 0, button, mole };
   burrows.push(burrow);
   button.addEventListener("click", () => whack(burrow));
 }
 
-const malletButton = document.createElement("button");
-malletButton.id = "mallet";
-malletButton.type = "button";
-malletButton.addEventListener("click", () => {
+function createShopButton(
+  id: string,
+  name: string,
+  description: string,
+): { button: HTMLButtonElement; meta: HTMLSpanElement } {
+  const button = document.createElement("button");
+  button.id = id;
+  button.type = "button";
+  button.className = "upgrade";
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "name";
+  nameSpan.textContent = name;
+  const descSpan = document.createElement("span");
+  descSpan.className = "desc";
+  descSpan.textContent = description;
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  button.append(nameSpan, descSpan, meta);
+  shop.append(button);
+  return { button, meta };
+}
+
+const mallet = createShopButton(
+  "mallet",
+  "Bigger Mallet",
+  "Each whack shakes loose one more star.",
+);
+const burrowUpgrade = createShopButton(
+  "burrow-upgrade",
+  "Extra Burrow",
+  "Another burrow sifts stardust around the clock.",
+);
+const treats = createShopButton(
+  "treats",
+  "Mole Treats",
+  "Well-fed moles pop up 15% faster per treat.",
+);
+const golden = createShopButton(
+  "golden",
+  "Golden Mole",
+  "Every 8th whack strikes gold and pays eightfold.",
+);
+
+mallet.button.addEventListener("click", () => {
   if (stars < malletCost()) {
     return;
   }
@@ -105,12 +180,8 @@ malletButton.addEventListener("click", () => {
   malletLevel += 1;
   render();
 });
-shop.append(malletButton);
 
-const burrowButton = document.createElement("button");
-burrowButton.id = "burrow-upgrade";
-burrowButton.type = "button";
-burrowButton.addEventListener("click", () => {
+burrowUpgrade.button.addEventListener("click", () => {
   if (stars < burrowCost()) {
     return;
   }
@@ -118,12 +189,8 @@ burrowButton.addEventListener("click", () => {
   burrowLevel += 1;
   render();
 });
-shop.append(burrowButton);
 
-const treatsButton = document.createElement("button");
-treatsButton.id = "treats";
-treatsButton.type = "button";
-treatsButton.addEventListener("click", () => {
+treats.button.addEventListener("click", () => {
   if (stars < treatsCost() || treatsLevel >= TREATS_MAX) {
     return;
   }
@@ -131,12 +198,8 @@ treatsButton.addEventListener("click", () => {
   treatsLevel += 1;
   render();
 });
-shop.append(treatsButton);
 
-const goldenButton = document.createElement("button");
-goldenButton.id = "golden";
-goldenButton.type = "button";
-goldenButton.addEventListener("click", () => {
+golden.button.addEventListener("click", () => {
   if (stars < goldenCost() || goldenLevel >= GOLDEN_MAX) {
     return;
   }
@@ -144,7 +207,6 @@ goldenButton.addEventListener("click", () => {
   goldenLevel += 1;
   render();
 });
-shop.append(goldenButton);
 
 let lastMs = performance.now();
 let popTimerMs = 600;
@@ -177,9 +239,9 @@ function updateMoles(nowMs: number, dtMs: number) {
   }
 }
 
-function floatStars(anchor: HTMLElement, text: string, golden: boolean) {
+function floatStars(anchor: HTMLElement, text: string, goldenPayout: boolean) {
   const span = document.createElement("span");
-  span.className = golden ? "float-star golden" : "float-star";
+  span.className = goldenPayout ? "float-star golden" : "float-star";
   span.textContent = text;
   const fieldRect = field.getBoundingClientRect();
   const rect = anchor.getBoundingClientRect();
@@ -200,37 +262,37 @@ function whack(burrow: Burrow) {
   burrow.up = false;
   burrow.button.classList.remove("up");
   whacks += 1;
-  const golden = goldenLevel > 0 && whacks % GOLDEN_EVERY === 0;
-  const payout = golden ? currentWhack() * GOLDEN_PAYOUT : currentWhack();
+  const goldenWhack = goldenLevel > 0 && whacks % GOLDEN_EVERY === 0;
+  const payout = goldenWhack ? currentWhack() * GOLDEN_PAYOUT : currentWhack();
   stars += payout;
-  floatStars(burrow.button, `+${payout}★`, golden);
+  burrow.mole.classList.add("whacked");
+  if (goldenWhack) {
+    burrow.mole.classList.add("golden");
+  }
+  setTimeout(() => burrow.mole.classList.remove("whacked", "golden"), 250);
+  floatStars(burrow.button, `+${payout}★`, goldenWhack);
   render();
 }
 
 function render() {
-  starCount.textContent = `★ ${Math.floor(stars)} stars`;
+  starCount.textContent = `★ ${Math.floor(stars)}`;
   rate.textContent = `${
     currentDrip().toFixed(1)
   }★ per second · ${currentWhack()}★ per whack`;
-  for (const burrow of burrows) {
-    burrow.button.textContent = burrow.up ? "mole!" : "•";
-  }
-  malletButton.disabled = stars < malletCost();
-  malletButton.textContent =
-    `Bigger Mallet — ${malletCost()}★ · owned ×${malletLevel} (+1★ per whack)`;
-  burrowButton.disabled = stars < burrowCost();
-  burrowButton.textContent =
-    `Extra Burrow — ${burrowCost()}★ · owned ×${burrowLevel} (+0.4★ per second)`;
+  mallet.button.disabled = stars < malletCost();
+  mallet.meta.textContent = `${malletCost()}★ · owned ×${malletLevel}`;
+  burrowUpgrade.button.disabled = stars < burrowCost();
+  burrowUpgrade.meta.textContent = `${burrowCost()}★ · owned ×${burrowLevel}`;
   const treatsMaxed = treatsLevel >= TREATS_MAX;
-  treatsButton.disabled = treatsMaxed || stars < treatsCost();
-  treatsButton.textContent = treatsMaxed
-    ? `Mole Treats — maxed out · owned ×${treatsLevel}`
-    : `Mole Treats — ${treatsCost()}★ · owned ×${treatsLevel} (moles pop 15% faster)`;
+  treats.button.disabled = treatsMaxed || stars < treatsCost();
+  treats.meta.textContent = treatsMaxed
+    ? `maxed out · owned ×${treatsLevel}`
+    : `${treatsCost()}★ · owned ×${treatsLevel}`;
   const goldenMaxed = goldenLevel >= GOLDEN_MAX;
-  goldenButton.disabled = goldenMaxed || stars < goldenCost();
-  goldenButton.textContent = goldenMaxed
-    ? `Golden Mole — maxed out`
-    : `Golden Mole — ${goldenCost()}★ · every 8th whack pays eightfold`;
+  golden.button.disabled = goldenMaxed || stars < goldenCost();
+  golden.meta.textContent = goldenMaxed
+    ? `maxed out`
+    : `${goldenCost()}★ · one-time`;
 }
 
 function tick(nowMs: number) {
