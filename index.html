@@ -37,6 +37,29 @@
     #field {
       display: flex;
       gap: 18px;
+      position: relative;
+    }
+    .float-star {
+      position: absolute;
+      transform: translateX(-50%);
+      font-weight: 700;
+      color: #ffd76a;
+      pointer-events: none;
+      animation: rise 0.9s ease-out forwards;
+      z-index: 2;
+    }
+    .float-star.golden {
+      color: #ffe9a8;
+      font-size: 1.15rem;
+    }
+    @keyframes rise {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-44px);
+      }
     }
     .burrow {
       width: 110px;
