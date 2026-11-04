@@ -10,7 +10,23 @@ starCount.textContent = "★ 0 stars";
 const field = document.createElement("div");
 field.id = "field";
 
-app.append(heading, starCount, field);
+const shop = document.createElement("div");
+shop.id = "shop";
+
+app.append(heading, starCount, field, shop);
+
+const malletButton = document.createElement("button");
+malletButton.id = "mallet";
+malletButton.type = "button";
+malletButton.addEventListener("click", () => {
+  if (stars < MALLET_COST) {
+    return;
+  }
+  stars -= MALLET_COST;
+  starsPerWhack += 1;
+  render();
+});
+shop.append(malletButton);
 
 const BURROW_COUNT = 3;
 const POP_INTERVAL_MS = 1800;
@@ -20,7 +36,11 @@ const POP_DURATION_MS = 1400;
 const STARS_PER_SECOND = 0.2;
 
 let stars = 0;
-const starsPerWhack = 1;
+let starsPerWhack = 1;
+
+// The first upgrade: a bigger mallet shakes one more star loose per
+// whack. Spending is blocked while unaffordable.
+const MALLET_COST = 10;
 
 type Burrow = {
   up: boolean;
@@ -91,6 +111,8 @@ function render() {
   for (const burrow of burrows) {
     burrow.button.textContent = burrow.up ? "mole!" : "•";
   }
+  malletButton.disabled = stars < MALLET_COST;
+  malletButton.textContent = `Bigger Mallet — ${MALLET_COST}★ (+1★ per whack)`;
 }
 
 function tick(nowMs: number) {

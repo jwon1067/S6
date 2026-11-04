@@ -52,6 +52,27 @@
     .burrow.whiff {
       animation: shake 0.24s ease-in-out;
     }
+    #shop {
+      max-width: 380px;
+      width: 100%;
+    }
+    #shop button {
+      width: 100%;
+      font: inherit;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #4a4e8a;
+      background: #2a2d55;
+      color: #f2e8d5;
+      cursor: pointer;
+    }
+    #shop button:hover:not(:disabled) {
+      background: #3d4180;
+    }
+    #shop button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
     @keyframes shake {
       25% {
         transform: translateX(-3px);
