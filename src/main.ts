@@ -2,6 +2,8 @@
 import burrowUrl from "./assets/burrow.svg?no-inline";
 // @deno-types="./asset-url.d.ts"
 import moleUrl from "./assets/mole.svg?no-inline";
+// @deno-types="./asset-url.d.ts"
+import starUrl from "./assets/star.svg?no-inline";
 import { deriveRates, type Rates } from "./rates.ts";
 import {
   buy,
@@ -14,6 +16,12 @@ import {
 import { type Upgrade, UPGRADES } from "./upgrades.ts";
 
 const app = document.querySelector<HTMLElement>("#app")!;
+
+const favicon = document.createElement("link");
+favicon.rel = "icon";
+favicon.type = "image/svg+xml";
+favicon.href = starUrl;
+document.head.append(favicon);
 
 const heading = document.createElement("h1");
 heading.textContent = "Star Burrow";
