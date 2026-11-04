@@ -1,20 +1,18 @@
-// Vite turns this import into a production-safe URL. Keep it as a file so
-// even this tiny example demonstrates a separately deployed asset.
-// @deno-types="./asset-url.d.ts"
-import tileUrl from "./assets/tile.svg?no-inline";
-
 const app = document.querySelector<HTMLElement>("#app")!;
 
 const heading = document.createElement("h1");
-heading.textContent = "D1 project";
+heading.textContent = "Whack-a-Mole";
 
-const image = document.createElement("img");
-image.src = tileUrl;
-image.alt = "A teal tile with a cream circle";
-image.width = 96;
-image.height = 96;
+const hint = document.createElement("p");
+hint.className = "hint";
+hint.textContent = "Click the button to whack.";
 
-const message = document.createElement("p");
-message.textContent = "Your project starts here.";
+const whackButton = document.createElement("button");
+whackButton.id = "whack-button";
+whackButton.type = "button";
+whackButton.textContent = "Whack the mole";
+whackButton.addEventListener("click", () => {
+  console.log("Whack!");
+});
 
-app.append(heading, image, message);
+app.append(heading, hint, whackButton);
