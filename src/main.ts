@@ -95,6 +95,7 @@ type ShopEntry = {
 
 function createShopButton(upgrade: Upgrade): ShopEntry {
   const button = document.createElement("button");
+  button.id = upgrade.id;
   button.type = "button";
   button.className = "upgrade";
   const nameSpan = document.createElement("span");
