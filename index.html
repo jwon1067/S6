@@ -192,6 +192,15 @@
       margin-top: 4px;
       font-variant-numeric: tabular-nums;
     }
+    .upgrade.bought {
+      animation: bought-pulse 0.3s ease-out;
+    }
+    @keyframes bought-pulse {
+      50% {
+        transform: scale(1.02);
+        border-color: #ffd76a;
+      }
+    }
     .footer {
       margin: 0;
       color: #8f89b0;

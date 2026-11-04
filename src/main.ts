@@ -2,6 +2,16 @@
 import burrowUrl from "./assets/burrow.svg?no-inline";
 // @deno-types="./asset-url.d.ts"
 import moleUrl from "./assets/mole.svg?no-inline";
+import { deriveRates, type Rates } from "./rates.ts";
+import {
+  buy,
+  canBuy,
+  costOfNext,
+  createInitialState,
+  type GameState,
+  levelOf,
+} from "./state.ts";
+import { type Upgrade, UPGRADES } from "./upgrades.ts";
 
 const app = document.querySelector<HTMLElement>("#app")!;
 
@@ -44,59 +54,7 @@ app.append(heading, tagline, stats, field, shop, footer);
 const BURROW_COUNT = 3;
 const POP_DURATION_MS = 1400;
 
-// Upgrades grow more expensive with every purchase, so early buys are
-// quick wins and later ones are real decisions.
-const MALLET_BASE = 10;
-const MALLET_GROWTH = 1.65; // +1★ per whack per level
-const BURROW_BASE = 25;
-const BURROW_GROWTH = 1.75; // +0.4★ per second per level
-const TREATS_BASE = 40;
-const TREATS_GROWTH = 1.9; // pops 15% faster per level
-const TREATS_MAX = 8;
-const GOLDEN_BASE = 120;
-const GOLDEN_GROWTH = 2.2; // one-time: every 8th whack pays eightfold
-const GOLDEN_MAX = 1;
-const GOLDEN_EVERY = 8;
-const GOLDEN_PAYOUT = 8;
-
-let stars = 0;
-let whacks = 0;
-let malletLevel = 0;
-let burrowLevel = 0;
-let treatsLevel = 0;
-let goldenLevel = 0;
-
-function costFor(baseCost: number, growth: number, level: number): number {
-  return Math.round(baseCost * Math.pow(growth, level));
-}
-
-function malletCost(): number {
-  return costFor(MALLET_BASE, MALLET_GROWTH, malletLevel);
-}
-
-function burrowCost(): number {
-  return costFor(BURROW_BASE, BURROW_GROWTH, burrowLevel);
-}
-
-function treatsCost(): number {
-  return costFor(TREATS_BASE, TREATS_GROWTH, treatsLevel);
-}
-
-function goldenCost(): number {
-  return costFor(GOLDEN_BASE, GOLDEN_GROWTH, goldenLevel);
-}
-
-function currentWhack(): number {
-  return 1 + malletLevel;
-}
-
-function currentDrip(): number {
-  return 0.2 + 0.4 * burrowLevel;
-}
-
-function currentPopInterval(): number {
-  return 1800 * Math.pow(0.85, treatsLevel);
-}
+const state: GameState = createInitialState();
 
 type Burrow = {
   up: boolean;
@@ -129,84 +87,45 @@ for (let i = 0; i < BURROW_COUNT; i++) {
   button.addEventListener("click", () => whack(burrow));
 }
 
-function createShopButton(
-  id: string,
-  name: string,
-  description: string,
-): { button: HTMLButtonElement; meta: HTMLSpanElement } {
+type ShopEntry = {
+  upgrade: Upgrade;
+  button: HTMLButtonElement;
+  meta: HTMLSpanElement;
+};
+
+function createShopButton(upgrade: Upgrade): ShopEntry {
   const button = document.createElement("button");
-  button.id = id;
   button.type = "button";
   button.className = "upgrade";
   const nameSpan = document.createElement("span");
   nameSpan.className = "name";
-  nameSpan.textContent = name;
+  nameSpan.textContent = upgrade.name;
   const descSpan = document.createElement("span");
   descSpan.className = "desc";
-  descSpan.textContent = description;
+  descSpan.textContent = upgrade.description;
   const meta = document.createElement("span");
   meta.className = "meta";
   button.append(nameSpan, descSpan, meta);
   shop.append(button);
-  return { button, meta };
+  return { upgrade, button, meta };
 }
 
-const mallet = createShopButton(
-  "mallet",
-  "Bigger Mallet",
-  "Each whack shakes loose one more star.",
-);
-const burrowUpgrade = createShopButton(
-  "burrow-upgrade",
-  "Extra Burrow",
-  "Another burrow sifts stardust around the clock.",
-);
-const treats = createShopButton(
-  "treats",
-  "Mole Treats",
-  "Well-fed moles pop up 15% faster per treat.",
-);
-const golden = createShopButton(
-  "golden",
-  "Golden Mole",
-  "Every 8th whack strikes gold and pays eightfold.",
-);
+// The shop is rendered straight from the catalog: one purchase
+// handler and one render path serve every upgrade.
+const shopEntries: ShopEntry[] = [];
 
-mallet.button.addEventListener("click", () => {
-  if (stars < malletCost()) {
-    return;
-  }
-  stars -= malletCost();
-  malletLevel += 1;
-  render();
-});
-
-burrowUpgrade.button.addEventListener("click", () => {
-  if (stars < burrowCost()) {
-    return;
-  }
-  stars -= burrowCost();
-  burrowLevel += 1;
-  render();
-});
-
-treats.button.addEventListener("click", () => {
-  if (stars < treatsCost() || treatsLevel >= TREATS_MAX) {
-    return;
-  }
-  stars -= treatsCost();
-  treatsLevel += 1;
-  render();
-});
-
-golden.button.addEventListener("click", () => {
-  if (stars < goldenCost() || goldenLevel >= GOLDEN_MAX) {
-    return;
-  }
-  stars -= goldenCost();
-  goldenLevel += 1;
-  render();
-});
+for (const upgrade of UPGRADES) {
+  const entry = createShopButton(upgrade);
+  entry.button.addEventListener("click", () => {
+    if (buy(state, upgrade)) {
+      entry.button.classList.remove("bought");
+      void entry.button.offsetWidth;
+      entry.button.classList.add("bought");
+      render(deriveRates(state));
+    }
+  });
+  shopEntries.push(entry);
+}
 
 let lastMs = performance.now();
 let popTimerMs = 600;
@@ -225,11 +144,11 @@ function spawnMole(nowMs: number) {
   burrow.button.classList.add("up");
 }
 
-function updateMoles(nowMs: number, dtMs: number) {
+function updateMoles(nowMs: number, dtMs: number, rates: Rates) {
   popTimerMs -= dtMs;
   if (popTimerMs <= 0) {
     spawnMole(nowMs);
-    popTimerMs = currentPopInterval() * (0.9 + Math.random() * 0.2);
+    popTimerMs = rates.popIntervalMs * (0.9 + Math.random() * 0.2);
   }
   for (const burrow of burrows) {
     if (burrow.up && nowMs >= burrow.upUntil) {
@@ -261,46 +180,45 @@ function whack(burrow: Burrow) {
   }
   burrow.up = false;
   burrow.button.classList.remove("up");
-  whacks += 1;
-  const goldenWhack = goldenLevel > 0 && whacks % GOLDEN_EVERY === 0;
-  const payout = goldenWhack ? currentWhack() * GOLDEN_PAYOUT : currentWhack();
-  stars += payout;
+  const rates = deriveRates(state);
+  state.whacks += 1;
+  const goldenWhack = rates.goldenEveryN > 0 &&
+    state.whacks % rates.goldenEveryN === 0;
+  const payout = goldenWhack
+    ? rates.perWhack * rates.goldenPayout
+    : rates.perWhack;
+  state.stars += payout;
   burrow.mole.classList.add("whacked");
   if (goldenWhack) {
     burrow.mole.classList.add("golden");
   }
   setTimeout(() => burrow.mole.classList.remove("whacked", "golden"), 250);
   floatStars(burrow.button, `+${payout}★`, goldenWhack);
-  render();
+  render(rates);
 }
 
-function render() {
-  starCount.textContent = `★ ${Math.floor(stars)}`;
+function render(rates: Rates) {
+  starCount.textContent = `★ ${Math.floor(state.stars)}`;
   rate.textContent = `${
-    currentDrip().toFixed(1)
-  }★ per second · ${currentWhack()}★ per whack`;
-  mallet.button.disabled = stars < malletCost();
-  mallet.meta.textContent = `${malletCost()}★ · owned ×${malletLevel}`;
-  burrowUpgrade.button.disabled = stars < burrowCost();
-  burrowUpgrade.meta.textContent = `${burrowCost()}★ · owned ×${burrowLevel}`;
-  const treatsMaxed = treatsLevel >= TREATS_MAX;
-  treats.button.disabled = treatsMaxed || stars < treatsCost();
-  treats.meta.textContent = treatsMaxed
-    ? `maxed out · owned ×${treatsLevel}`
-    : `${treatsCost()}★ · owned ×${treatsLevel}`;
-  const goldenMaxed = goldenLevel >= GOLDEN_MAX;
-  golden.button.disabled = goldenMaxed || stars < goldenCost();
-  golden.meta.textContent = goldenMaxed
-    ? `maxed out`
-    : `${goldenCost()}★ · one-time`;
+    rates.perSecond.toFixed(1)
+  }★ per second · ${rates.perWhack}★ per whack`;
+  for (const entry of shopEntries) {
+    const level = levelOf(state, entry.upgrade.id);
+    const maxed = level >= entry.upgrade.maxLevel;
+    entry.button.disabled = !canBuy(state, entry.upgrade);
+    entry.meta.textContent = maxed
+      ? `maxed out · owned ×${level}`
+      : `${costOfNext(state, entry.upgrade)}★ · owned ×${level}`;
+  }
 }
 
 function tick(nowMs: number) {
   const dtMs = Math.min(nowMs - lastMs, 60_000);
   lastMs = nowMs;
-  stars += currentDrip() * (dtMs / 1000);
-  updateMoles(nowMs, dtMs);
-  render();
+  const rates = deriveRates(state);
+  state.stars += rates.perSecond * (dtMs / 1000);
+  updateMoles(nowMs, dtMs, rates);
+  render(rates);
   requestAnimationFrame(tick);
 }
 

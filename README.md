@@ -29,6 +29,17 @@ their own, and the burrow shop turns stars into a bigger star economy.
   build; every commit runs it through a pre-commit hook
 - Pushes to `main` deploy to GitHub Pages
 
+## Design notes
+
+- One `requestAnimationFrame` loop drives both the drip and the mole
+  scheduler from elapsed time, so growth is frame-rate independent and
+  never counted twice.
+- The upgrade catalog lives in `src/upgrades.ts` as data; purchase
+  rules live in `src/state.ts`, rates are derived from owned levels in
+  `src/rates.ts`, and `src/main.ts` keeps only the loop, the field,
+  and the shop. Adding an upgrade means adding one catalog entry —
+  the shop, affordability, costing, and rate math come for free.
+
 ## Credits
 
 Tooling adapted from the [CMPM 121 Fall 2026 S01 starter](https://github.com/ucsc-cmpm-121-f26/s01-starter/tree/8974888efb6537be82e8eb069db139ea885039da), which has no explicit repository license. No new license is assigned to that material. The D1 scaffold and original SVG were authored with OpenAI GPT-6 Astra assistance. Dependencies retain their respective licenses. The Star Burrow game and its artwork were authored with GLM (z-ai/glm-5.3-flash) assistance in OpenCode.
