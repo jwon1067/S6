@@ -7,40 +7,99 @@ const starCount = document.createElement("p");
 starCount.id = "star-count";
 starCount.textContent = "★ 0 stars";
 
-const whackButton = document.createElement("button");
-whackButton.id = "whack-button";
-whackButton.type = "button";
-whackButton.textContent = "Whack the mole";
+const field = document.createElement("div");
+field.id = "field";
 
-let stars = 0;
+app.append(heading, starCount, field);
+
+const BURROW_COUNT = 3;
+const POP_INTERVAL_MS = 1800;
+const POP_DURATION_MS = 1400;
 
 // The burrow sifts stardust on its own, even while nobody clicks.
-const starsPerSecond = 0.2;
+const STARS_PER_SECOND = 0.2;
+
+let stars = 0;
+const starsPerWhack = 1;
+
+type Burrow = {
+  up: boolean;
+  upUntil: number;
+  button: HTMLButtonElement;
+};
+
+const burrows: Burrow[] = [];
+
+for (let i = 0; i < BURROW_COUNT; i++) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "burrow";
+  button.textContent = "•";
+  field.append(button);
+  const burrow: Burrow = { up: false, upUntil: 0, button };
+  burrows.push(burrow);
+  button.addEventListener("click", () => whack(burrow));
+}
+
+let lastMs = performance.now();
+let popTimerMs = 600;
+
+// Timed mole appearances share the same frame loop as the drip, and
+// still measure elapsed time, so pops keep their cadence at any frame
+// rate and no timer runs twice.
+function spawnMole(nowMs: number) {
+  const down = burrows.filter((burrow) => !burrow.up);
+  if (down.length === 0) {
+    return;
+  }
+  const burrow = down[Math.floor(Math.random() * down.length)];
+  burrow.up = true;
+  burrow.upUntil = nowMs + POP_DURATION_MS;
+  burrow.button.classList.add("up");
+}
+
+function updateMoles(nowMs: number, dtMs: number) {
+  popTimerMs -= dtMs;
+  if (popTimerMs <= 0) {
+    spawnMole(nowMs);
+    popTimerMs = POP_INTERVAL_MS * (0.9 + Math.random() * 0.2);
+  }
+  for (const burrow of burrows) {
+    if (burrow.up && nowMs >= burrow.upUntil) {
+      burrow.up = false;
+      burrow.button.classList.remove("up");
+    }
+  }
+}
+
+function whack(burrow: Burrow) {
+  if (!burrow.up) {
+    // Whiffing an empty burrow earns nothing, just a shake.
+    burrow.button.classList.remove("whiff");
+    void burrow.button.offsetWidth;
+    burrow.button.classList.add("whiff");
+    return;
+  }
+  burrow.up = false;
+  burrow.button.classList.remove("up");
+  stars += starsPerWhack;
+  render();
+}
 
 function render() {
   starCount.textContent = `★ ${Math.floor(stars)} stars`;
+  for (const burrow of burrows) {
+    burrow.button.textContent = burrow.up ? "mole!" : "•";
+  }
 }
 
-whackButton.addEventListener("click", () => {
-  stars += 1;
-  render();
-});
-
-// One animation-frame loop drives every timed change. Growth is paid
-// out per elapsed second (not per frame), so it is independent of the
-// display's frame rate. The setInterval from the previous step is gone,
-// so the drip cannot be counted twice.
-let lastMs = performance.now();
-
 function tick(nowMs: number) {
-  const dtMs = nowMs - lastMs;
+  const dtMs = Math.min(nowMs - lastMs, 60_000);
   lastMs = nowMs;
-  stars += starsPerSecond * (dtMs / 1000);
+  stars += STARS_PER_SECOND * (dtMs / 1000);
+  updateMoles(nowMs, dtMs);
   render();
   requestAnimationFrame(tick);
 }
 
 requestAnimationFrame(tick);
-
-app.append(heading, starCount, whackButton);
-render();
