@@ -33,7 +33,8 @@ their own, and the burrow shop turns stars into a bigger star economy.
 
 - One `requestAnimationFrame` loop drives both the drip and the mole
   scheduler from elapsed time, so growth is frame-rate independent and
-  never counted twice.
+  never counted twice; the drip is paid for the exact seconds elapsed,
+  including time the tab spent hidden.
 - The upgrade catalog lives in `src/upgrades.ts` as data; purchase
   rules live in `src/state.ts`, rates are derived from owned levels in
   `src/rates.ts`, and `src/main.ts` keeps only the loop, the field,

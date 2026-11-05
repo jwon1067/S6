@@ -222,7 +222,10 @@ function render(rates: Rates) {
 }
 
 function tick(nowMs: number) {
-  const dtMs = Math.min(nowMs - lastMs, 60_000);
+  // The drip is paid for the exact seconds elapsed, not per frame: at
+  // any frame rate it is identical, and time spent with the tab hidden
+  // is caught up on the first frame back.
+  const dtMs = nowMs - lastMs;
   lastMs = nowMs;
   const rates = deriveRates(state);
   state.stars += rates.perSecond * (dtMs / 1000);
