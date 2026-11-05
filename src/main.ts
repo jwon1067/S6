@@ -75,6 +75,7 @@ const burrows: Burrow[] = [];
 
 for (let i = 0; i < BURROW_COUNT; i++) {
   const button = document.createElement("button");
+  button.id = `burrow-${i + 1}`;
   button.type = "button";
   button.className = "burrow";
   button.setAttribute("aria-label", `Burrow ${i + 1}`);
