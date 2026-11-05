@@ -1,7 +1,6 @@
 import { costOf, type Upgrade } from "./upgrades.ts";
 
 export const BASE_DRIP = 0.2; // the first burrow sifts stardust on its own
-export const GOLDEN_PAYOUT = 8;
 
 export type GameState = {
   stars: number;

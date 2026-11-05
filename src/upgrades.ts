@@ -7,6 +7,7 @@ export type UpgradeEffect = {
   popSpeed?: number; // multiplies the pop interval, per level
   dripMultiplier?: number; // multiplies the star drip, per level
   goldenEveryN?: number; // every Nth whack is golden
+  goldenMultiplier?: number; // payout multiplier of a golden whack
 };
 
 export type Upgrade = {
@@ -54,7 +55,7 @@ export const UPGRADES: Upgrade[] = [
     baseCost: 120,
     costGrowth: 2.2,
     maxLevel: 1,
-    effect: { goldenEveryN: 8 },
+    effect: { goldenEveryN: 8, goldenMultiplier: 8 },
   },
   {
     id: "comet",

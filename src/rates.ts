@@ -1,4 +1,4 @@
-import { BASE_DRIP, type GameState, GOLDEN_PAYOUT, levelOf } from "./state.ts";
+import { BASE_DRIP, type GameState, levelOf } from "./state.ts";
 import { UPGRADES } from "./upgrades.ts";
 
 export type Rates = {
@@ -21,6 +21,7 @@ export function deriveRates(state: GameState): Rates {
   let popIntervalMs = BASE_POP_MS;
   let dripMultiplier = 1;
   let goldenEveryN = 0;
+  let goldenMultiplier = 1;
   for (const upgrade of UPGRADES) {
     const level = levelOf(state, upgrade.id);
     if (level === 0) {
@@ -42,12 +43,15 @@ export function deriveRates(state: GameState): Rates {
     if (effect.goldenEveryN !== undefined) {
       goldenEveryN = effect.goldenEveryN;
     }
+    if (effect.goldenMultiplier !== undefined) {
+      goldenMultiplier = effect.goldenMultiplier;
+    }
   }
   return {
     perWhack,
     perSecond: drip * dripMultiplier,
     popIntervalMs: Math.max(MIN_POP_MS, popIntervalMs),
     goldenEveryN,
-    goldenPayout: goldenEveryN > 0 ? GOLDEN_PAYOUT : 1,
+    goldenPayout: goldenEveryN > 0 ? goldenMultiplier : 1,
   };
 }
